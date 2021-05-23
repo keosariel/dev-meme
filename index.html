@@ -178,7 +178,7 @@
                                 ${source}
                             </div>
         
-                            <a href="javascript:get_from_source('${source}')" class="static-avatar">
+                            <a href="javascript:get_from_source('${source}', cls=false)" class="static-avatar">
                                 <img class="author-profile-image" src="${favicon}" alt="${source}" onerror="this.style.display='none';"></a>
                         </li>
                     </ul>
@@ -901,10 +901,12 @@
             return false;
         }
 
-        function get_from_source(name) {
+        function get_from_source(name, cls=true) {
             document.getElementById("query").value = "!" + name;
-            show_sources();
-            window.scroll(0, 0)
+            if(cls) {
+                show_sources();
+                window.scroll(0, 0)
+            }
             get_query();
             return false;
         }
