@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="application-name" content="Dev meme">
-    <meta name="description" content="The essential dev stories of the moment. Developers news site of record with automatic tagging. Not for dummies.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://keosariel.github.io/dev-meme/">
-    <meta property="og:title" content="DEV meme">
-    <meta property="og:description"
-        content="The essential dev stories of the moment. Developers news site of record with automatic tagging. Not for dummies.">
-    <meta property="og:site_name" content="DEV meme">
-
-    <meta name="twitter:site" content="@keosariel">
-    <meta name="twitter:title" content="DEV meme">
-    <meta name="twitter:description"
-        content="The essential dev stories of the moment. Developers news site of record with automatic tagging. Not for dummies.">
-    <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="styles.css">
-    <title>Dev-meme</title>
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <meta name="application-name" content="Dev meme">
+        <meta name="description" content="The essential dev stories of the moment. Developers news site of record with automatic tagging. Not for dummies.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://keosariel.github.io/dev-meme/">
+        <meta property="og:title" content="DEV meme">
+        <meta property="og:description"
+            content="The essential dev stories of the moment. Developers news site of record with automatic tagging. Not for dummies.">
+        <meta property="og:site_name" content="DEV meme">
+    
+        <meta name="twitter:site" content="@keosariel">
+        <meta name="twitter:title" content="DEV meme">
+        <meta name="twitter:description"
+            content="The essential dev stories of the moment. Developers news site of record with automatic tagging. Not for dummies.">
+        <meta name="twitter:card" content="summary_large_image">
+        <link rel="stylesheet" href="styles.css">
+        <title>Dev-meme</title>
+    </head>
 
 <script>
 
@@ -67,6 +67,8 @@
     }
 
     function get_posts(url, page, limit = 10) {
+        console.log(url);
+
         opts = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -204,9 +206,10 @@
                                     <p>
                                         <a href="javascript:go_home()">Recent Stories</a>
                                         &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;
-                                        <a href="https://github.com/keosariel/dev-meme" target="_blank" title="Fork and contribute on GitHub">Fork
+                                        <a href="https://github.com/thechangelog/nightly" target="_blank" title="Fork and contribute on GitHub">Fork
                                             on GitHub</a>
-                                        &nbsp;&nbsp;&nbsp;
+                                        &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;
+                                        <a href="https://www.nairagazer.com" target="_blank">Powered by Nairagazer</a>
                                     </p>
                                 </td>
                             </tr>
@@ -915,9 +918,9 @@
             page = 1;
             if (query.startsWith("#")) {
                 query = query.slice(1, query.length);
-                url = `${base}search_tags?q=${query}`;
+                url = `${base}search_tags?q=${encodeURIComponent(query)}`;
             } else {
-                url = `${base}search?q=${query}`;
+                url = `${base}search?q=${encodeURIComponent(query)}`;
             }
             clear_feed();
             do_get_posts();
