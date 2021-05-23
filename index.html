@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="styles.css">
+    <title>Document</title>
+</head>
+
+<script>
+
+    function sanitize(string) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;',
+            "/": '&#x2F;',
+        };
+        const reg = /[&<>"'/]/ig;
+        return string.replace(reg, (match) => (map[match]));
+    }
+
+    function timeSince(date) {
+
+        var seconds = Math.floor((new Date() - date) / 1000);
+
+        var interval = seconds / 31536000;
+
+        if (interval > 1) {
+            return Math.floor(interval) + "yr ago";
+        }
+        interval = seconds / 2592000;
+        if (interval > 1) {
+            return Math.floor(interval) + "mon ago";
+        }
+        interval = seconds / 86400;
+        if (interval > 1) {
+            return Math.floor(interval) + "d ago";
+        }
+        interval = seconds / 3600;
+        if (interval > 1) {
+            return Math.floor(interval) + "h ago";
+        }
+        interval = seconds / 60;
+        if (interval > 1) {
+            return Math.floor(interval) + "min ago";
+        }
+        return Math.floor(seconds) + "sec ago";
+    }
+
+    function get_posts(url, page, limit = 10) {
+        opts = {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ "limit": limit, "page": page })
+        };
+        fetch(url, opts)
+            .then(res => res.json())
+            .then(function (res) {
+                // console.log(res);
+                var current_row = document.createElement("div");
+                current_row.classList.add("post-feed")
+
+                var all_rows = [];
+                var count = 0;
+                for (var i = 0; i < res.length; i++) {
+                    post_as_html = create_post_card(res[i]);
+                    count += 1;
+                    current_row.innerHTML += post_as_html;
+
+                    if ((i + 1) % 5 == 0) {
+                        all_rows.push(current_row);
+                        current_row = document.createElement("div");
+                        current_row.classList.add("post-feed")
+                        count = 0;
+                    } else if (count == 3) {
+                        all_rows.push(current_row);
+                        current_row = document.createElement("div");
+                        current_row.classList.add("post-feed")
+                        count = 0;
+                    } else if (i + 1 == res.length) {
+                        all_rows.push(current_row);
+                    }
+                }
+
+                var placeholders = document.getElementById("feed-placeholder");
+                placeholders.style.display = "none";
+
+                var feed = document.getElementById("feed");
+
+                for (var i = 0; i < all_rows.length; i++) {
+                    feed.append(all_rows[i])
+                }
+
+            })
+            .catch(console.error);
+    }
+
+    function create_post_card(post_as_json) {
+        var has_image = false;
+        var no_image = "no-image";
+        var media = post_as_json["media"];
+        var tags = post_as_json["hash_tags"].split(",");
+        var text = post_as_json["text"];
+        var source = post_as_json["source"];
+        var favicon = post_as_json["favicon"];
+        var date = new Date(Date.parse(post_as_json["date"]));
+        date = timeSince(date);
+        if (text.length < 11) {
+            text = "";
+        }
+
+        text = sanitize(text);
+
+        if (media) {
+            has_image = true;
+            no_image = "";
+            if (media.endsWith("/")) {
+                media = media.slice(0, media.length - 1);
+            }
+        }
+
+        var tags_html = "";
+        for (var x = 0; x < tags.length; x++) {
+            tag_name = tags[x];
+            if (Boolean(tag_name)) {
+                tags_html += `
+                    <span class="post-card-tag" onclick="javascript:get_tag_query('${tag_name}')">
+                        <span class="post-card-tag__prefix">#</span>${tag_name}
+                    </span>
+                `
+            }
+        }
+
+        var html = `
+        <article class="post-card post ${no_image}">
+            <a class="post-card-image-link" target="_blank" href="${post_as_json["url"]}">
+                <div class="post-card-image" style="background-image: url(${media})"></div>
+            </a>
+            <div class="post-card-content">
+                <a class="post-card-content-link" target="_blank" href="${post_as_json["url"]}">
+                    <header class="post-card-header">
+                        <h2 class="post-card-title">${post_as_json["title"]}</h2>
+                    </header>
+                    <section class="post-card-excerpt">
+                        <p>${text}</p>
+                    </section>
+                </a>
+                <span class="post-card-tags">
+                    ${tags_html}
+                </span>
+                <footer class="post-card-meta">
+        
+                    <ul class="author-list">
+                        <li class="author-list-item">
+        
+                            <div class="author-name-tooltip">
+                                ${source}
+                            </div>
+        
+                            <a href="/author/dax/" class="static-avatar">
+                                <img class="author-profile-image" src="${favicon}" alt="${source}" onerror="this.style.display='none';"></a>
+                        </li>
+                    </ul>
+        
+                    <span class="reading-time">${date}</span>
+        
+                </footer>
+            </div>
+        </article>
+        `;
+
+        return html
+    }    
+</script>
+
+<body>
+    <table class="top-bar hide-on-mobile" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tbody>
+            <tr>
+                <td width="100%">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center">
+                        <tbody>
+                            <tr>
+                                <td width="100%">
+                                    <p>
+                                        <a href="javascript:go_home()">Recent Stories</a>
+                                        &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;
+                                        <a href="https://github.com/thechangelog/nightly" target="_blank" title="Fork and contribute on GitHub">Fork
+                                            on GitHub</a>
+                                        &nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;
+                                        <a href="https://www.nairagazer.com" target="_blank">Powered by Nairagazer</a>
+                                    </p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <main class="main">
+        <section class="top js-subscribe_cta">
+            <div class="top-content">
+                <h1 class="top-heading">Stories by other developers across the web</h1>
+                <!--<p class="top-text"></p>-->
+                <form action="javascript:void(0)" class="search-form" id="subscribe" method="post" onsubmit="javascript:get_query();">
+                    <input name="q" id="query" class="search-form-input" placeholder="Search articles" aria-label="top 10 languages"
+                        required="">
+                    <div class="search-form-submit">
+                        <input class="search-form-submit-button" type="submit" value="Search">
+                    </div>
+                </form>
+                <p class="top-info" id="top-info">All recent developer stories across the web! <a href="javascript:show_sources();">see
+                        sources</a></p>
+            </div>
+        </section>
+        <div class="sources" id="sources" style="display:none;">
+            <p class="top-info" id="top-info">All the content on this site are generated from these helpful sources! <a
+                    href="javascript:show_sources();">Close sources</a></p>
+            <ul class="sources-names">
+                <li><a href="javascript:get_from_source('1stwebdesigner')">1stwebdesigner</a></li>
+                <li><a href="javascript:get_from_source('24a11y')">24a11y</a></li>
+                <li><a href="javascript:get_from_source('30secondsofcode')">30secondsofcode</a></li>
+                <li><a href="javascript:get_from_source('9elements')">9elements</a></li>
+                <li><a href="javascript:get_from_source('aaron-powell')">aaron-powell</a></li>
+                <li><a href="javascript:get_from_source('activestate')">activestate</a></li>
+                <li><a href="javascript:get_from_source('adamsilver')">adamsilver</a></li>
+                <li><a href="javascript:get_from_source('addyosmani')">addyosmani</a></li>
+                <li><a href="javascript:get_from_source('adrianroselli')">adrianroselli</a></li>
+                <li><a href="javascript:get_from_source('algorithmia')">algorithmia</a></li>
+                <li><a href="javascript:get_from_source('alistapart')">alistapart</a></li>
+                <li><a href="javascript:get_from_source('americanexpress')">americanexpress</a></li>
+                <li><a href="javascript:get_from_source('amp')">amp</a></li>
+                <li><a href="javascript:get_from_source('analytics-vidhya')">analytics-vidhya</a></li>
+                <li><a href="javascript:get_from_source('android developers')">android developers</a></li>
+                <li><a href="javascript:get_from_source('androidpolice')">androidpolice</a></li>
+                <li><a href="javascript:get_from_source('angular')">angular</a></li>
+                <li><a href="javascript:get_from_source('apple')">apple</a></li>
+                <li><a href="javascript:get_from_source('appsignal')">appsignal</a></li>
+                <li><a href="javascript:get_from_source('auth0')">auth0</a></li>
+                <li><a href="javascript:get_from_source('axesslab')">axesslab</a></li>
+                <li><a href="javascript:get_from_source('babeljs')">babeljs</a></li>
+                <li><a href="javascript:get_from_source('better-programming')">better-programming</a></li>
+                <li><a href="javascript:get_from_source('bitsrc')">bitsrc</a></li>
+                <li><a href="javascript:get_from_source('bocoup')">bocoup</a></li>
+                <li><a href="javascript:get_from_source('bootstrap')">bootstrap</a></li>
+                <li><a href="javascript:get_from_source('brave')">brave</a></li>
+                <li><a href="javascript:get_from_source('calibreapp')">calibreapp</a></li>
+                <li><a href="javascript:get_from_source('changelog')">changelog</a></li>
+                <li><a href="javascript:get_from_source('christianheilmann')">christianheilmann</a></li>
+                <li><a href="javascript:get_from_source('chrome')">chrome</a></li>
+                <li><a href="javascript:get_from_source('cloudflare')">cloudflare</a></li>
+                <li><a href="javascript:get_from_source('cloudfour')">cloudfour</a></li>
+                <li><a href="javascript:get_from_source('codeascraft')">codeascraft</a></li>
+                <li><a href="javascript:get_from_source('codeburst')">codeburst</a></li>
+                <li><a href="javascript:get_from_source('codeinwp')">codeinwp</a></li>
+                <li><a href="javascript:get_from_source('codelikeagirl')">codelikeagirl</a></li>
+                <li><a href="javascript:get_from_source('codepen')">codepen</a></li>
+                <li><a href="javascript:get_from_source('codesource')">codesource</a></li>
+                <li><a href="javascript:get_from_source('codrops')">codrops</a></li>
+                <li><a href="javascript:get_from_source('css-tricks')">css-tricks</a></li>
+                <li><a href="javascript:get_from_source('darkreading')">darkreading</a></li>
+                <li><a href="javascript:get_from_source('daverupert')">daverupert</a></li>
+                <li><a href="javascript:get_from_source('david-Katz')">david-Katz</a></li>
+                <li><a href="javascript:get_from_source('davidwalsh')">davidwalsh</a></li>
+                <li><a href="javascript:get_from_source('deque')">deque</a></li>
+                <li><a href="javascript:get_from_source('designmodo')">designmodo</a></li>
+                <li><a href="javascript:get_from_source('devdojo')">devdojo</a></li>
+                <li><a href="javascript:get_from_source('devops')">devops</a></li>
+                <li><a href="javascript:get_from_source('devto')">devto</a></li>
+                <li><a href="javascript:get_from_source('facebook-developers')">facebook-developers</a></li>
+                <li><a href="javascript:get_from_source('filamentgroup')">filamentgroup</a></li>
+                <li><a href="javascript:get_from_source('flaviocopes')">flaviocopes</a></li>
+                <li><a href="javascript:get_from_source('flutterawesome')">flutterawesome</a></li>
+                <li><a href="javascript:get_from_source('freecodecamp')">freecodecamp</a></li>
+                <li><a href="javascript:get_from_source('freedomscientific')">freedomscientific</a></li>
+                <li><a href="javascript:get_from_source('frontend-focus')">frontend-focus</a></li>
+                <li><a href="javascript:get_from_source('fullstacktraining')">fullstacktraining</a></li>
+                <li><a href="javascript:get_from_source('geeksforgeeks')">geeksforgeeks</a></li>
+                <li><a href="javascript:get_from_source('getflywheel')">getflywheel</a></li>
+                <li><a href="javascript:get_from_source('gitconnected')">gitconnected</a></li>
+                <li><a href="javascript:get_from_source('github')">github</a></li>
+                <li><a href="javascript:get_from_source('gitlab')">gitlab</a></li>
+                <li><a href="javascript:get_from_source('gomakethings')">gomakethings</a></li>
+                <li><a href="javascript:get_from_source('google-developers')">google-developers</a></li>
+                <li><a href="javascript:get_from_source('google-developers')">google-developers</a></li>
+                <li><a href="javascript:get_from_source('hackernews')">hackernews</a></li>
+                <li><a href="javascript:get_from_source('hackernoon')">hackernoon</a></li>
+                <li><a href="javascript:get_from_source('hashnode')">hashnode</a></li>
+                <li><a href="javascript:get_from_source('heartbeat')">heartbeat</a></li>
+                <li><a href="javascript:get_from_source('heroku')">heroku</a></li>
+                <li><a href="javascript:get_from_source('honeypot')">honeypot</a></li>
+                <li><a href="javascript:get_from_source('humanwhocodes')">humanwhocodes</a></li>
+                <li><a href="javascript:get_from_source('ibm')">ibm</a></li>
+                <li><a href="javascript:get_from_source('inclusive-components')">inclusive-components</a></li>
+                <li><a href="javascript:get_from_source('infoq')">infoq</a></li>
+                <li><a href="javascript:get_from_source('instagram-engineering')">instagram-engineering</a></li>
+                <li><a href="javascript:get_from_source('iosexample')">iosexample</a></li>
+                <li><a href="javascript:get_from_source('itnext')">itnext</a></li>
+                <li><a href="javascript:get_from_source('jakearchibald')">jakearchibald</a></li>
+                <li><a href="javascript:get_from_source('javascript-in-plain-english')">javascript-in-plain-english</a></li>
+                <li><a href="javascript:get_from_source('javascriptjanuary')">javascriptjanuary</a></li>
+                <li><a href="javascript:get_from_source('jooq')">jooq</a></li>
+                <li><a href="javascript:get_from_source('kdnuggets')">kdnuggets</a></li>
+                <li><a href="javascript:get_from_source('kentcdodds')">kentcdodds</a></li>
+                <li><a href="javascript:get_from_source('kirupa')">kirupa</a></li>
+                <li><a href="javascript:get_from_source('lambda')">lambda</a></li>
+                <li><a href="javascript:get_from_source('larashout')">larashout</a></li>
+                <li><a href="javascript:get_from_source('logrocket')">logrocket</a></li>
+                <li><a href="javascript:get_from_source('logrocket')">logrocket</a></li>
+                <li><a href="javascript:get_from_source('love2dev')">love2dev</a></li>
+                <li><a href="javascript:get_from_source('machmetrics')">machmetrics</a></li>
+                <li><a href="javascript:get_from_source('markdotto')">markdotto</a></li>
+                <li><a href="javascript:get_from_source('mathiasbynens')">mathiasbynens</a></li>
+                <li><a href="javascript:get_from_source('meiert')">meiert</a></li>
+                <li><a href="javascript:get_from_source('moonhighway')">moonhighway</a></li>
+                <li><a href="javascript:get_from_source('mozilla')">mozilla</a></li>
+                <li><a href="javascript:get_from_source('mozilla')">mozilla</a></li>
+                <li><a href="javascript:get_from_source('mozilla')">mozilla</a></li>
+                <li><a href="javascript:get_from_source('netflixtechblog')">netflixtechblog</a></li>
+                <li><a href="javascript:get_from_source('nngroup')">nngroup</a></li>
+                <li><a href="javascript:get_from_source('nodejs')">nodejs</a></li>
+                <li><a href="javascript:get_from_source('nvidia')">nvidia</a></li>
+                <li><a href="javascript:get_from_source('opensource')">opensource</a></li>
+                <li><a href="javascript:get_from_source('opera')">opera</a></li>
+                <li><a href="javascript:get_from_source('perfplanet')">perfplanet</a></li>
+                <li><a href="javascript:get_from_source('phpied')">phpied</a></li>
+                <li><a href="javascript:get_from_source('proandroiddev')">proandroiddev</a></li>
+                <li><a href="javascript:get_from_source('producthunt')">producthunt</a></li>
+                <li><a href="javascript:get_from_source('pyimagesearch')">pyimagesearch</a></li>
+                <li><a href="javascript:get_from_source('pythonawesome')">pythonawesome</a></li>
+                <li><a href="javascript:get_from_source('quirksmode')">quirksmode</a></li>
+                <li><a href="javascript:get_from_source('rachelandrew')">rachelandrew</a></li>
+                <li><a href="javascript:get_from_source('reactjs')">reactjs</a></li>
+                <li><a href="javascript:get_from_source('reactjsexample')">reactjsexample</a></li>
+                <li><a href="javascript:get_from_source('realpython')">realpython</a></li>
+                <li><a href="javascript:get_from_source('remysharp')">remysharp</a></li>
+                <li><a href="javascript:get_from_source('sarasoueidan')">sarasoueidan</a></li>
+                <li><a href="javascript:get_from_source('sass-lang')">sass-lang</a></li>
+                <li><a href="javascript:get_from_source('shimmercat')">shimmercat</a></li>
+                <li><a href="javascript:get_from_source('smashingmagazine')">smashingmagazine</a></li>
+                <li><a href="javascript:get_from_source('softwaremill')">softwaremill</a></li>
+                <li><a href="javascript:get_from_source('spreadprivacy')">spreadprivacy</a></li>
+                <li><a href="javascript:get_from_source('stackabuse')">stackabuse</a></li>
+                <li><a href="javascript:get_from_source('stackoverflow')">stackoverflow</a></li>
+                <li><a href="javascript:get_from_source('svelte')">svelte</a></li>
+                <li><a href="javascript:get_from_source('the-software-house')">the-software-house</a></li>
+                <li><a href="javascript:get_from_source('the-startup')">the-startup</a></li>
+                <li><a href="javascript:get_from_source('the-vue-point')">the-vue-point</a></li>
+                <li><a href="javascript:get_from_source('theolognion')">theolognion</a></li>
+                <li><a href="javascript:get_from_source('timkadlec')">timkadlec</a></li>
+                <li><a href="javascript:get_from_source('towards-artificial-intelligence')">towards-artificial-intelligence</a></li>
+                <li><a href="javascript:get_from_source('towardsdatascience')">towardsdatascience</a></li>
+                <li><a href="javascript:get_from_source('trentwalton')">trentwalton</a></li>
+                <li><a href="javascript:get_from_source('twilio')">twilio</a></li>
+                <li><a href="javascript:get_from_source('twitter')">twitter</a></li>
+                <li><a href="javascript:get_from_source('una')">una</a></li>
+                <li><a href="javascript:get_from_source('v8')">v8</a></li>
+                <li><a href="javascript:get_from_source('volument')">volument</a></li>
+                <li><a href="javascript:get_from_source('vuejs')">vuejs</a></li>
+                <li><a href="javascript:get_from_source('vuejsexamples')">vuejsexamples</a></li>
+                <li><a href="javascript:get_from_source('vueschool')">vueschool</a></li>
+                <li><a href="javascript:get_from_source('w3c')">w3c</a></li>
+                <li><a href="javascript:get_from_source('w3c')">w3c</a></li>
+                <li><a href="javascript:get_from_source('w3c')">w3c</a></li>
+                <li><a href="javascript:get_from_source('webaim')">webaim</a></li>
+                <li><a href="javascript:get_from_source('webdev')">webdev</a></li>
+                <li><a href="javascript:get_from_source('webglfundamentals')">webglfundamentals</a></li>
+                <li><a href="javascript:get_from_source('webkit')">webkit</a></li>
+                <li><a href="javascript:get_from_source('whatwg')">whatwg</a></li>
+                <li><a href="javascript:get_from_source('windows')">windows</a></li>
+                <li><a href="javascript:get_from_source('xanthir')">xanthir</a></li>
+                <li><a href="javascript:get_from_source('zachleat')">zachleat</a></li>
+            </ul>
+            <ul>
+                <li>© <a target="_blank" href="https://www.nairagazer.com">Nairagazer</a> <span id="copyright-year">2021</span></li>
+            </ul>
+        </div>
+        <div class="feed" id="feed-placeholder">
+            <div class="post-feed feed-placeholder">
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+            </div>
+            <div class="post-feed feed-placeholder">
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+            </div>
+            <div class="post-feed feed-placeholder">
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+            </div>
+            <div class="post-feed feed-placeholder">
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+
+                <article class="post-card post">
+                    <a class="post-card-image-link" href="#">
+                        <div class="post-card-image placeholder"></div>
+                    </a>
+                    <div class="post-card-content">
+                        <a class="post-card-content-link" href="#">
+                            <header class="post-card-header">
+                                <span class="post-card-tags">
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                    <span class="post-card-tag placeholder">
+
+                                    </span>
+                                </span>
+                                <h2 class="post-card-title placeholder">
+                                    <p class="placeholder">
+                                    </p>
+                                    <p class="placeholder">
+                                    </p>
+                                </h2>
+                            </header>
+                            <section class="post-card-excerpt">
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                                <p class="placeholder">
+                                </p>
+                            </section>
+                        </a>
+                        <footer class="post-card-meta">
+
+                            <ul class="author-list">
+                                <li class="author-list-item">
+                                    <a href="#" class="static-avatar placeholder">
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <span class="reading-time placeholder"></span>
+
+                        </footer>
+                    </div>
+                </article>
+            </div>
+        </div>
+        <div class="feed" id="feed">
+
+        </div>
+        <div class="spinner feed-spinner" id="spinner" style="display: none;">
+            <div class="bounce1"></div>
+            <div class="bounce2"></div>
+            <div class="bounce3"></div>
+        </div>
+    </main>
+    <script>
+        var spinner = document.getElementById("spinner");
+        var page = 1;
+        const base = "https://readme.pythonanywhere.com/"
+        var url = `${base}posts`;
+        var feed = document.getElementById("feed");
+        var top_info = document.getElementById("top-info");
+        var sources = document.getElementById("sources");
+
+        function show_sources() {
+            if (sources.style.display == "none") {
+                sources.style.display = "block";
+                feed.style.display = "none";
+                top_info.style.display = "none";
+            } else {
+                sources.style.display = "none";
+                feed.style.display = "block";
+                top_info.style.display = "block";
+            }
+        }
+
+
+        function get_tag_query(tag_name) {
+            document.getElementById("query").value = "#" + tag_name;
+            window.scroll(0, 0)
+            get_query();
+            return false;
+        }
+
+        function get_from_source(name) {
+            document.getElementById("query").value = "!" + name;
+            show_sources();
+            window.scroll(0, 0)
+            get_query();
+            return false;
+        }
+
+        function get_query() {
+            query = document.getElementById("query").value;
+            query = query.trim();
+
+            top_info.innerHTML = `Search results for "${query}". <a href="javascript:show_sources();">see sources</a>`;
+
+            page = 1;
+            if (query.startsWith("#")) {
+                query = query.slice(1, query.length);
+                url = `${base}search_tags?q=${query}`;
+            } else {
+                url = `${base}search?q=${query}`;
+            }
+            clear_feed();
+            do_get_posts();
+            page += 1;
+            return false;
+        }
+
+        function do_get_posts() {
+            spinner.style.display = "block";
+            get_posts(url = url, page = page);
+            spinner.style.display = "none";
+            page += 1;
+        }
+
+        function clear_feed() {
+            var placeholders = document.getElementById("feed-placeholder");
+            placeholders.style.display = "block";
+            feed.innerHTML = "";
+        }
+
+        function go_home() {
+            url = `${base}posts`;
+            top_info.innerHTML = `All recent developer stories across the web! <a href="javascript:show_sources();">see sources</a>`;
+            page = 1;
+            clear_feed();
+            do_get_posts();
+            page += 1;
+        }
+
+        window.onscroll = function (ev) {
+            if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 1)) {
+                // you're at the bottom of the page
+                do_get_posts();
+            }
+        };
+        get_posts(url = url, page = page);
+        page += 1;
+    </script>
+</body>
+
+</html>
